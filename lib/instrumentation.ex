@@ -23,6 +23,7 @@ defmodule Instrumentation do
     Enum.map(definitions, fn {name, arity} = definition ->
       tag = build_tag(module, definition)
       args = build_args(arity)
+
       quote do
         def unquote(name)(unquote_splicing(args)) do
           IO.inspect("instrumented", label: unquote(tag))
