@@ -4,4 +4,9 @@ defmodule Instrumentation.Demo do
   def hello(name) do
     "hello #{name}"
   end
+
+  @pokemon "pikachu"
+  def annotated do
+    :ok
+  end
 end
