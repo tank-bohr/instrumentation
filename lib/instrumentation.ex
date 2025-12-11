@@ -1,7 +1,7 @@
 defmodule Instrumentation do
   defmacro __using__(definitions) do
     quote do
-      Module.register_attribute(__MODULE__, :to_instrument, accumulate: true)
+      Module.register_attribute(__MODULE__, :annotated, accumulate: true)
       @definitions unquote(definitions)
       @before_compile unquote(__MODULE__)
       @on_definition unquote(__MODULE__)
@@ -10,7 +10,7 @@ defmodule Instrumentation do
         beam_path = :code.which(__MODULE__)
         {:ok, beam} = File.read(beam_path)
         {:ok, {mode, chunks}} = :beam_lib.chunks(beam, [:abstract_code])
-        {_, abstract_code} = chunks[:abstract_code]
+        {:raw_abstract_v1, abstract_code} = chunks[:abstract_code]
         content = :erl_prettypr.format(:erl_syntax.form_list(abstract_code))
         File.write("erlang_source.erl", content)
       end
@@ -20,8 +20,8 @@ defmodule Instrumentation do
   defmacro __before_compile__(env) do
     module = env.module
     definitions = Module.get_attribute(module, :definitions)
-    to_instrument = Module.get_attribute(module, :to_instrument)
-    definitions = normalize(module, definitions ++ to_instrument)
+    annotated = Module.get_attribute(module, :annotated)
+    definitions = normalize(module, definitions ++ annotated)
     Module.make_overridable(module, strip_tags(definitions))
 
     Enum.map(definitions, fn {name, arity, tag} ->
@@ -42,7 +42,7 @@ defmodule Instrumentation do
     case :ets.take(set, :pokemon) do
       [{:pokemon, pokemon, _anno, _meta}] ->
         arity = length(args)
-        Module.put_attribute(env.module, :to_instrument, {name, arity, pokemon})
+        Module.put_attribute(env.module, :annotated, {name, arity, pokemon})
 
       [] ->
         :ok
