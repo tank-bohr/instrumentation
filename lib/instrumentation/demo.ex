@@ -1,7 +1,7 @@
 defmodule Instrumentation.Demo do
-  # use Instrumentation, [hello: 0]
+  use Instrumentation, [hello: 1]
 
-  def hello(name \\ :world) do
+  def hello(name) do
     "hello #{name}"
   end
 end
