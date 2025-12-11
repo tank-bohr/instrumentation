@@ -21,27 +21,10 @@ defmodule Instrumentation do
     module = env.module
     definitions = Module.get_attribute(module, :definitions)
     to_instrument = Module.get_attribute(module, :to_instrument)
-    to_rewrite = definitions ++ to_instrument
+    definitions = normalize(module, definitions ++ to_instrument)
+    Module.make_overridable(module, strip_tags(definitions))
 
-    to_override =
-      Enum.map(to_rewrite, fn
-        {name, arity} -> {name, arity}
-        {name, arity, _tag} -> {name, arity}
-      end)
-
-    Module.make_overridable(module, to_override)
-
-    Enum.map(to_rewrite, fn definition ->
-      {name, arity, tag} =
-        case definition do
-          {name, arity} ->
-            tag = build_tag(module, definition)
-            {name, arity, tag}
-
-          {name, arity, tag} ->
-            {name, arity, tag}
-        end
-
+    Enum.map(definitions, fn {name, arity, tag} ->
       args = build_args(arity)
 
       quote do
@@ -68,7 +51,21 @@ defmodule Instrumentation do
 
   def __on_definition__(_env, _kind, _name, _args, _guards, _body), do: :ok
 
-  defp build_tag(module, {name, _arity}) do
+  defp normalize(module, definitions) do
+    Enum.map(definitions, fn
+      {name, arity} -> {name, arity, build_tag(module, name)}
+      {name, arity, tag} -> {name, arity, tag}
+    end)
+  end
+
+  defp strip_tags(definitions) do
+    Enum.map(definitions, fn
+      {name, arity} -> {name, arity}
+      {name, arity, _tag} -> {name, arity}
+    end)
+  end
+
+  defp build_tag(module, name) do
     module
     |> Module.split()
     |> Enum.drop(1)
